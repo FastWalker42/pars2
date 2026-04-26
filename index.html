@@ -12,7 +12,12 @@
 			<!-- Header -->
 			<div class="mb-8">
 				<div class="flex justify-between items-center mb-4">
-					<h1 class="text-3xl font-bold text-gray-900">Товары Avito</h1>
+					<div>
+						<h1 class="text-3xl font-bold text-gray-900">
+							<span x-show="!brandFromUrl">Товары Avito</span>
+							<span x-show="brandFromUrl"> <span x-text="brandFromUrl"></span> - Товары Avito </span>
+						</h1>
+					</div>
 
 					<!-- Language Selector -->
 					<div class="flex items-center gap-4">
@@ -64,7 +69,7 @@
 			</div>
 
 			<!-- Brand Navigation -->
-			<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+			<div x-show="!brandFromUrl" class="bg-white rounded-lg shadow-md p-6 mb-6">
 				<h2 class="text-xl font-semibold mb-4" x-text="translations[settings.language].sellers"></h2>
 				<div class="flex flex-wrap gap-2">
 					<button
@@ -85,6 +90,32 @@
 							(<span x-text="getBrandItemCount(brand)"></span>)
 						</button>
 					</template>
+				</div>
+			</div>
+
+			<!-- Brand Info from URL -->
+			<div x-show="brandFromUrl" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-2">
+						<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+							></path>
+						</svg>
+						<span class="text-blue-900 font-medium">
+							<span x-text="translations[settings.language].viewingSeller"></span>:
+							<span class="font-bold" x-text="brandFromUrl"></span>
+							(<span x-text="filteredItems.length"></span> items)
+						</span>
+					</div>
+					<a
+						:href="window.location.pathname"
+						class="text-blue-600 hover:text-blue-800 underline text-sm"
+						x-text="translations[settings.language].viewAllSellers"
+					></a>
 				</div>
 			</div>
 
@@ -309,6 +340,7 @@
 					error: null,
 					translationCache: {},
 					translationProgress: 0,
+					brandFromUrl: null, // Brand from URL query parameter
 					settings: {
 						language: 'ru',
 						currency: 'RUB',
@@ -324,6 +356,8 @@
 						ru: {
 							sellers: 'Продавцы',
 							allSellers: 'Все продавцы',
+							viewingSeller: 'Просмотр продавца',
+							viewAllSellers: 'Показать всех продавцов',
 							filters: 'Фильтры',
 							search: 'Поиск',
 							searchPlaceholder: 'Поиск по названию или описанию...',
@@ -344,6 +378,8 @@
 						en: {
 							sellers: 'Sellers',
 							allSellers: 'All Sellers',
+							viewingSeller: 'Viewing seller',
+							viewAllSellers: 'View all sellers',
 							filters: 'Filters',
 							search: 'Search',
 							searchPlaceholder: 'Search by title or description...',
@@ -364,6 +400,8 @@
 						zh: {
 							sellers: '卖家',
 							allSellers: '所有卖家',
+							viewingSeller: '查看卖家',
+							viewAllSellers: '查看所有卖家',
 							filters: '筛选',
 							search: '搜索',
 							searchPlaceholder: '按标题或描述搜索...',
@@ -388,6 +426,15 @@
 							this.loading = true
 							this.error = null
 
+							// Check for brand in URL query parameters
+							const urlParams = new URLSearchParams(window.location.search)
+							const brandParam = urlParams.get('brand')
+							if (brandParam) {
+								this.brandFromUrl = brandParam
+								this.filters.brand = brandParam
+								console.log('Brand from URL:', brandParam)
+							}
+
 							// Load translations from localStorage
 							const savedTranslations = localStorage.getItem('translationCache')
 							if (savedTranslations) {
@@ -403,6 +450,14 @@
 							const brandsResponse = await fetch('./brands.json')
 							if (!brandsResponse.ok) throw new Error('Failed to load brands')
 							this.brands = await brandsResponse.json()
+
+							// If brand from URL, validate it exists
+							if (this.brandFromUrl && !this.brands.includes(this.brandFromUrl)) {
+								this.error = `Brand "${this.brandFromUrl}" not found. Available brands: ${this.brands.join(', ')}`
+							} else if (this.brandFromUrl) {
+								// Update page title
+								document.title = `${this.brandFromUrl} - Avito Items Browser`
+							}
 
 							// Load items from each brand
 							const itemsPromises = this.brands.map(async (brand) => {
@@ -519,6 +574,8 @@
 					},
 
 					selectBrand(brand) {
+						// Don't allow changing brand if it's from URL
+						if (this.brandFromUrl) return
 						this.filters.brand = brand
 					},
 
@@ -531,7 +588,7 @@
 						this.filters = {
 							search: '',
 							category: '',
-							brand: this.filters.brand, // Keep brand filter
+							brand: this.brandFromUrl || '', // Keep brand from URL
 							priceMin: null,
 							priceMax: null,
 						}
