@@ -1,628 +1,733 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avito Items Browser</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-</head>
-<body class="bg-gray-50">
-    <div x-data="avitoApp()" x-init="loadData()" class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <div class="mb-8">
-            <div class="flex justify-between items-center mb-4">
-                <h1 class="text-3xl font-bold text-gray-900">Товары Avito</h1>
-                
-                <!-- Language Selector -->
-                <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <label class="text-sm font-medium text-gray-700">Язык:</label>
-                        <select 
-                            x-model="settings.language"
-                            @change="changeLanguage()"
-                            class="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                            <option value="ru">🇷🇺 Русский</option>
-                            <option value="en">🇬🇧 English</option>
-                            <option value="zh">🇨🇳 中文</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Currency Selector -->
-                    <div class="flex items-center gap-2">
-                        <label class="text-sm font-medium text-gray-700" x-text="translations[settings.language].currency"></label>
-                        <select 
-                            x-model="settings.currency"
-                            class="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                            <option value="RUB">₽ RUB</option>
-                            <option value="USD">$ USD</option>
-                            <option value="CNY">¥ CNY</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <p class="text-gray-600">
-                <span x-text="translations[settings.language].itemsFound"></span>: 
-                <span x-text="filteredItems.length"></span>
-            </p>
-            <p class="text-sm text-gray-500" x-show="exchangeRates.timestamp">
-                <span x-text="translations[settings.language].exchangeRate"></span>: 
-                1 RUB = <span x-text="getExchangeRate()"></span>
-                (<span x-text="translations[settings.language].updated"></span>: <span x-text="new Date(exchangeRates.timestamp * 1000).toLocaleString()"></span>)
-            </p>
-        </div>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Avito Items Browser</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+	</head>
+	<body class="bg-gray-50">
+		<div x-data="avitoApp()" x-init="loadData()" class="container mx-auto px-4 py-8">
+			<!-- Header -->
+			<div class="mb-8">
+				<div class="flex justify-between items-center mb-4">
+					<h1 class="text-3xl font-bold text-gray-900">Товары Avito</h1>
 
-        <!-- Brand Navigation -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 class="text-xl font-semibold mb-4" x-text="translations[settings.language].sellers"></h2>
-            <div class="flex flex-wrap gap-2">
-                <button 
-                    @click="selectBrand('')"
-                    :class="filters.brand === '' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
-                    class="px-4 py-2 rounded-lg hover:opacity-80 transition"
-                >
-                    <span x-text="translations[settings.language].allSellers"></span>
-                    (<span x-text="allItems.length"></span>)
-                </button>
-                <template x-for="brand in brands" :key="brand">
-                    <button 
-                        @click="selectBrand(brand)"
-                        :class="filters.brand === brand ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
-                        class="px-4 py-2 rounded-lg hover:opacity-80 transition"
-                    >
-                        <span x-text="brand"></span>
-                        (<span x-text="getBrandItemCount(brand)"></span>)
-                    </button>
-                </template>
-            </div>
-        </div>
+					<!-- Language Selector -->
+					<div class="flex items-center gap-4">
+						<div class="flex items-center gap-2">
+							<label class="text-sm font-medium text-gray-700">Язык:</label>
+							<select
+								x-model="settings.language"
+								@change="changeLanguage()"
+								class="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							>
+								<option value="ru">🇷🇺 Русский</option>
+								<option value="en">🇬🇧 English</option>
+								<option value="zh">🇨🇳 中文</option>
+							</select>
+						</div>
 
-        <!-- Filters -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 class="text-xl font-semibold mb-4" x-text="translations[settings.language].filters"></h2>
-            
-            <!-- Search -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[settings.language].search"></label>
-                <input 
-                    type="text" 
-                    x-model="filters.search"
-                    :placeholder="translations[settings.language].searchPlaceholder"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-            </div>
+						<!-- Currency Selector -->
+						<div class="flex items-center gap-2">
+							<label
+								class="text-sm font-medium text-gray-700"
+								x-text="translations[settings.language].currency"
+							></label>
+							<select
+								x-model="settings.currency"
+								class="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							>
+								<option value="RUB">₽ RUB</option>
+								<option value="USD">$ USD</option>
+								<option value="CNY">¥ CNY</option>
+							</select>
+						</div>
+					</div>
+				</div>
+				<p class="text-gray-600">
+					<span x-text="translations[settings.language].itemsFound"></span>:
+					<span x-text="filteredItems.length"></span>
+				</p>
+				<p class="text-sm text-gray-500" x-show="exchangeRates.timestamp">
+					<span x-text="translations[settings.language].exchangeRate"></span>: 1 RUB =
+					<span x-text="getExchangeRate()"></span> (<span x-text="translations[settings.language].updated"></span>:
+					<span x-text="new Date(exchangeRates.timestamp * 1000).toLocaleString()"></span>)
+				</p>
+				<p class="text-sm text-gray-500" x-show="Object.keys(translationCache).length > 0">
+					💾 Cached translations: <span x-text="Object.keys(translationCache).length"></span>
+					<button @click="clearTranslationCache()" class="ml-2 text-red-600 hover:text-red-800 underline text-xs">
+						Clear cache
+					</button>
+				</p>
+			</div>
 
-            <!-- Category Filter -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[settings.language].category"></label>
-                <select 
-                    x-model="filters.category"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                    <option value="" x-text="translations[settings.language].allCategories"></option>
-                    <template x-for="cat in uniqueCategories" :key="cat.slug">
-                        <option :value="cat.slug" x-text="cat.name + ' (' + cat.count + ')'"></option>
-                    </template>
-                </select>
-            </div>
+			<!-- Brand Navigation -->
+			<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+				<h2 class="text-xl font-semibold mb-4" x-text="translations[settings.language].sellers"></h2>
+				<div class="flex flex-wrap gap-2">
+					<button
+						@click="selectBrand('')"
+						:class="filters.brand === '' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
+						class="px-4 py-2 rounded-lg hover:opacity-80 transition"
+					>
+						<span x-text="translations[settings.language].allSellers"></span>
+						(<span x-text="allItems.length"></span>)
+					</button>
+					<template x-for="brand in brands" :key="brand">
+						<button
+							@click="selectBrand(brand)"
+							:class="filters.brand === brand ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
+							class="px-4 py-2 rounded-lg hover:opacity-80 transition"
+						>
+							<span x-text="brand"></span>
+							(<span x-text="getBrandItemCount(brand)"></span>)
+						</button>
+					</template>
+				</div>
+			</div>
 
-            <!-- Price Range -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[settings.language].priceFrom"></label>
-                    <input 
-                        type="number" 
-                        x-model.number="filters.priceMin"
-                        placeholder="0"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[settings.language].priceTo"></label>
-                    <input 
-                        type="number" 
-                        x-model.number="filters.priceMax"
-                        placeholder="∞"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                </div>
-            </div>
+			<!-- Filters -->
+			<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+				<h2 class="text-xl font-semibold mb-4" x-text="translations[settings.language].filters"></h2>
 
-            <!-- Quick Price Filters -->
-            <div class="flex flex-wrap gap-2 mb-4">
-                <button 
-                    @click="setPrice(0, 2000)"
-                    class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
-                    x-text="'< ' + formatPrice(2000, settings.currency)"
-                ></button>
-                <button 
-                    @click="setPrice(2000, 10000)"
-                    class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
-                    x-text="formatPrice(2000, settings.currency) + ' - ' + formatPrice(10000, settings.currency)"
-                ></button>
-                <button 
-                    @click="setPrice(10000, 50000)"
-                    class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
-                    x-text="formatPrice(10000, settings.currency) + ' - ' + formatPrice(50000, settings.currency)"
-                ></button>
-                <button 
-                    @click="setPrice(50000, null)"
-                    class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
-                    x-text="'> ' + formatPrice(50000, settings.currency)"
-                ></button>
-            </div>
+				<!-- Search -->
+				<div class="mb-4">
+					<label
+						class="block text-sm font-medium text-gray-700 mb-2"
+						x-text="translations[settings.language].search"
+					></label>
+					<input
+						type="text"
+						x-model="filters.search"
+						:placeholder="translations[settings.language].searchPlaceholder"
+						class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+					/>
+				</div>
 
-            <!-- Reset Button -->
-            <button 
-                @click="resetFilters()"
-                class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-                x-text="translations[settings.language].resetFilters"
-            ></button>
-        </div>
+				<!-- Category Filter -->
+				<div class="mb-4">
+					<label
+						class="block text-sm font-medium text-gray-700 mb-2"
+						x-text="translations[settings.language].category"
+					></label>
+					<select
+						x-model="filters.category"
+						class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+					>
+						<option value="" x-text="translations[settings.language].allCategories"></option>
+						<template x-for="cat in uniqueCategories" :key="cat.slug">
+							<option :value="cat.slug" x-text="cat.name + ' (' + cat.count + ')'"></option>
+						</template>
+					</select>
+				</div>
 
-        <!-- Loading State -->
-        <div x-show="loading" class="text-center py-12">
-            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p class="mt-4 text-gray-600" x-text="translations[settings.language].loading"></p>
-            
-            <!-- Translation Progress -->
-            <div x-show="translationProgress > 0 && translationProgress < 100" class="mt-4 max-w-md mx-auto">
-                <div class="flex justify-between text-sm text-gray-600 mb-2">
-                    <span>Translating items...</span>
-                    <span x-text="translationProgress + '%'"></span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                    <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" :style="`width: ${translationProgress}%`"></div>
-                </div>
-            </div>
-        </div>
+				<!-- Price Range -->
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+					<div>
+						<label
+							class="block text-sm font-medium text-gray-700 mb-2"
+							x-text="translations[settings.language].priceFrom"
+						></label>
+						<input
+							type="number"
+							x-model.number="filters.priceMin"
+							placeholder="0"
+							class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						/>
+					</div>
+					<div>
+						<label
+							class="block text-sm font-medium text-gray-700 mb-2"
+							x-text="translations[settings.language].priceTo"
+						></label>
+						<input
+							type="number"
+							x-model.number="filters.priceMax"
+							placeholder="∞"
+							class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						/>
+					</div>
+				</div>
 
-        <!-- Error State -->
-        <div x-show="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
-            <p x-text="error"></p>
-        </div>
+				<!-- Quick Price Filters -->
+				<div class="flex flex-wrap gap-2 mb-4">
+					<button
+						@click="setPrice(0, 2000)"
+						class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+						x-text="'< ' + formatPrice(2000, settings.currency)"
+					></button>
+					<button
+						@click="setPrice(2000, 10000)"
+						class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+						x-text="formatPrice(2000, settings.currency) + ' - ' + formatPrice(10000, settings.currency)"
+					></button>
+					<button
+						@click="setPrice(10000, 50000)"
+						class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+						x-text="formatPrice(10000, settings.currency) + ' - ' + formatPrice(50000, settings.currency)"
+					></button>
+					<button
+						@click="setPrice(50000, null)"
+						class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+						x-text="'> ' + formatPrice(50000, settings.currency)"
+					></button>
+				</div>
 
-        <!-- Items Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <template x-for="item in filteredItems" :key="item.id">
-                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
-                    <!-- Image -->
-                    <div class="relative h-48 bg-gray-200">
-                        <img 
-                            :src="item.image" 
-                            :alt="getTranslatedField(item, 'title')"
-                            class="w-full h-full object-cover"
-                            @error="$event.target.src='https://via.placeholder.com/400x300?text=No+Image'"
-                        >
-                        <div class="absolute top-2 right-2 bg-white px-3 py-1 rounded-full shadow">
-                            <span class="text-lg font-bold text-blue-600" x-text="formatPrice(item.price, settings.currency)"></span>
-                        </div>
-                    </div>
-                    
-                    <!-- Content -->
-                    <div class="p-4">
-                        <h3 class="font-semibold text-lg mb-2 line-clamp-2" x-text="getTranslatedField(item, 'title')"></h3>
-                        
-                        <!-- Category Badge -->
-                        <div class="mb-2">
-                            <span 
-                                class="inline-block px-3 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full"
-                                x-text="getCategoryName(item)"
-                            ></span>
-                            <span 
-                                class="inline-block px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full ml-2"
-                                x-text="item.brand || 'Unknown'"
-                            ></span>
-                        </div>
-                        
-                        <!-- Location & Date -->
-                        <div class="flex items-center text-sm text-gray-500 mb-3">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                            <span x-text="item.location"></span>
-                            <span class="mx-2">•</span>
-                            <span x-text="item.date"></span>
-                        </div>
-                        
-                        <!-- Description -->
-                        <p class="text-sm text-gray-600 mb-4 line-clamp-3" x-text="getTranslatedField(item, 'description')"></p>
-                        
-                        <!-- Link -->
-                        <a 
-                            :href="item.url" 
-                            target="_blank"
-                            class="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                            x-text="translations[settings.language].viewOnAvito"
-                        ></a>
-                    </div>
-                </div>
-            </template>
-        </div>
+				<!-- Reset Button -->
+				<button
+					@click="resetFilters()"
+					class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+					x-text="translations[settings.language].resetFilters"
+				></button>
+			</div>
 
-        <!-- No Results -->
-        <div x-show="!loading && filteredItems.length === 0" class="text-center py-12">
-            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <h3 class="mt-2 text-lg font-medium text-gray-900" x-text="translations[settings.language].noResults"></h3>
-            <p class="mt-1 text-gray-500" x-text="translations[settings.language].tryDifferentFilters"></p>
-        </div>
-    </div>
+			<!-- Loading State -->
+			<div x-show="loading" class="text-center py-12">
+				<div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+				<p class="mt-4 text-gray-600" x-text="translations[settings.language].loading"></p>
 
-    <script>
-        function avitoApp() {
-            return {
-                brands: [],
-                allItems: [],
-                categoryMap: {},
-                exchangeRates: {},
-                loading: true,
-                error: null,
-                translationCache: {},
-                translationProgress: 0,
-                settings: {
-                    language: 'ru',
-                    currency: 'RUB'
-                },
-                filters: {
-                    search: '',
-                    category: '',
-                    brand: '',
-                    priceMin: null,
-                    priceMax: null
-                },
-                translations: {
-                    ru: {
-                        sellers: 'Продавцы',
-                        allSellers: 'Все продавцы',
-                        filters: 'Фильтры',
-                        search: 'Поиск',
-                        searchPlaceholder: 'Поиск по названию или описанию...',
-                        category: 'Категория',
-                        allCategories: 'Все категории',
-                        priceFrom: 'Цена от',
-                        priceTo: 'Цена до',
-                        resetFilters: 'Сбросить фильтры',
-                        loading: 'Загрузка данных...',
-                        itemsFound: 'Найдено товаров',
-                        viewOnAvito: 'Посмотреть на Avito',
-                        noResults: 'Ничего не найдено',
-                        tryDifferentFilters: 'Попробуйте изменить параметры фильтрации',
-                        currency: 'Валюта:',
-                        exchangeRate: 'Курс обмена',
-                        updated: 'обновлено'
-                    },
-                    en: {
-                        sellers: 'Sellers',
-                        allSellers: 'All Sellers',
-                        filters: 'Filters',
-                        search: 'Search',
-                        searchPlaceholder: 'Search by title or description...',
-                        category: 'Category',
-                        allCategories: 'All Categories',
-                        priceFrom: 'Price From',
-                        priceTo: 'Price To',
-                        resetFilters: 'Reset Filters',
-                        loading: 'Loading data...',
-                        itemsFound: 'Items Found',
-                        viewOnAvito: 'View on Avito',
-                        noResults: 'No Results',
-                        tryDifferentFilters: 'Try different filters',
-                        currency: 'Currency:',
-                        exchangeRate: 'Exchange Rate',
-                        updated: 'updated'
-                    },
-                    zh: {
-                        sellers: '卖家',
-                        allSellers: '所有卖家',
-                        filters: '筛选',
-                        search: '搜索',
-                        searchPlaceholder: '按标题或描述搜索...',
-                        category: '类别',
-                        allCategories: '所有类别',
-                        priceFrom: '最低价格',
-                        priceTo: '最高价格',
-                        resetFilters: '重置筛选',
-                        loading: '加载中...',
-                        itemsFound: '找到商品',
-                        viewOnAvito: '在Avito上查看',
-                        noResults: '未找到结果',
-                        tryDifferentFilters: '尝试不同的筛选条件',
-                        currency: '货币:',
-                        exchangeRate: '汇率',
-                        updated: '更新于'
-                    }
-                },
+				<!-- Translation Progress -->
+				<div x-show="translationProgress > 0 && translationProgress < 100" class="mt-4 max-w-md mx-auto">
+					<div class="flex justify-between text-sm text-gray-600 mb-2">
+						<span>Translating items...</span>
+						<span x-text="translationProgress + '%'"></span>
+					</div>
+					<div class="w-full bg-gray-200 rounded-full h-2.5">
+						<div
+							class="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+							:style="`width: ${translationProgress}%`"
+						></div>
+					</div>
+				</div>
+			</div>
 
-                async loadData() {
-                    try {
-                        this.loading = true;
-                        this.error = null;
+			<!-- Error State -->
+			<div x-show="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+				<p x-text="error"></p>
+			</div>
 
-                        // Load brands
-                        const brandsResponse = await fetch('./brands.json');
-                        if (!brandsResponse.ok) throw new Error('Failed to load brands');
-                        this.brands = await brandsResponse.json();
+			<!-- Items Grid -->
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				<template x-for="item in filteredItems" :key="item.id">
+					<div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
+						<!-- Image -->
+						<div class="relative h-48 bg-gray-200">
+							<img
+								:src="item.image"
+								:alt="getTranslatedField(item, 'title')"
+								class="w-full h-full object-cover"
+								@error="$event.target.src='https://via.placeholder.com/400x300?text=No+Image'"
+							/>
+							<div class="absolute top-2 right-2 bg-white px-3 py-1 rounded-full shadow">
+								<span
+									class="text-lg font-bold text-blue-600"
+									x-text="formatPrice(item.price, settings.currency)"
+								></span>
+							</div>
+						</div>
 
-                        // Load items from each brand
-                        const itemsPromises = this.brands.map(async (brand) => {
-                            try {
-                                const response = await fetch(`./${brand}.json`);
-                                if (!response.ok) return [];
-                                const items = await response.json();
-                                return items.map(item => ({ ...item, brand }));
-                            } catch (err) {
-                                console.error(`Failed to load ${brand}:`, err);
-                                return [];
-                            }
-                        });
+						<!-- Content -->
+						<div class="p-4">
+							<h3 class="font-semibold text-lg mb-2 line-clamp-2" x-text="getTranslatedField(item, 'title')"></h3>
 
-                        const itemsArrays = await Promise.all(itemsPromises);
-                        this.allItems = itemsArrays.flat();
+							<!-- Category Badge -->
+							<div class="mb-2">
+								<span
+									class="inline-block px-3 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full"
+									x-text="getCategoryName(item)"
+								></span>
+								<span
+									class="inline-block px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full ml-2"
+									x-text="item.brand || 'Unknown'"
+								></span>
+							</div>
 
-                        // Load category map
-                        const catResponse = await fetch('./categorymap.json');
-                        if (!catResponse.ok) throw new Error('Failed to load categories');
-                        this.categoryMap = await catResponse.json();
+							<!-- Location & Date -->
+							<div class="flex items-center text-sm text-gray-500 mb-3">
+								<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+									></path>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+									></path>
+								</svg>
+								<span x-text="item.location"></span>
+								<span class="mx-2">•</span>
+								<span x-text="item.date"></span>
+							</div>
 
-                        // Load exchange rates
-                        await this.loadExchangeRates();
+							<!-- Description -->
+							<p
+								class="text-sm text-gray-600 mb-4 line-clamp-3"
+								x-text="getTranslatedField(item, 'description')"
+							></p>
 
-                    } catch (err) {
-                        this.error = 'Error loading data: ' + err.message;
-                        console.error(err);
-                    } finally {
-                        this.loading = false;
-                    }
-                },
+							<!-- Link -->
+							<a
+								:href="item.url"
+								target="_blank"
+								class="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+								x-text="translations[settings.language].viewOnAvito"
+							></a>
+						</div>
+					</div>
+				</template>
+			</div>
 
-                async loadExchangeRates() {
-                    try {
-                        // Using free ExchangeRate-API (no API key required)
-                        const response = await fetch('https://open.er-api.com/v6/latest/RUB');
-                        if (!response.ok) throw new Error('Failed to load exchange rates');
-                        const data = await response.json();
-                        this.exchangeRates = {
-                            rates: data.rates,
-                            timestamp: data.time_last_update_unix
-                        };
-                    } catch (err) {
-                        console.error('Exchange rates error:', err);
-                        // Fallback rates
-                        this.exchangeRates = {
-                            rates: { RUB: 1, USD: 0.011, CNY: 0.079 },
-                            timestamp: Date.now() / 1000
-                        };
-                    }
-                },
+			<!-- No Results -->
+			<div x-show="!loading && filteredItems.length === 0" class="text-center py-12">
+				<svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+					></path>
+				</svg>
+				<h3 class="mt-2 text-lg font-medium text-gray-900" x-text="translations[settings.language].noResults"></h3>
+				<p class="mt-1 text-gray-500" x-text="translations[settings.language].tryDifferentFilters"></p>
+			</div>
+		</div>
 
-                getCategorySlug(item) {
-                    const match = item.url.match(/avito\.ru\/[^\/]+\/([^\/\?]+)/);
-                    return match ? match[1] : 'unknown';
-                },
+		<script>
+			function avitoApp() {
+				return {
+					brands: [],
+					allItems: [],
+					categoryMap: {},
+					exchangeRates: {},
+					loading: true,
+					error: null,
+					translationCache: {},
+					translationProgress: 0,
+					settings: {
+						language: 'ru',
+						currency: 'RUB',
+					},
+					filters: {
+						search: '',
+						category: '',
+						brand: '',
+						priceMin: null,
+						priceMax: null,
+					},
+					translations: {
+						ru: {
+							sellers: 'Продавцы',
+							allSellers: 'Все продавцы',
+							filters: 'Фильтры',
+							search: 'Поиск',
+							searchPlaceholder: 'Поиск по названию или описанию...',
+							category: 'Категория',
+							allCategories: 'Все категории',
+							priceFrom: 'Цена от',
+							priceTo: 'Цена до',
+							resetFilters: 'Сбросить фильтры',
+							loading: 'Загрузка данных...',
+							itemsFound: 'Найдено товаров',
+							viewOnAvito: 'Посмотреть на Avito',
+							noResults: 'Ничего не найдено',
+							tryDifferentFilters: 'Попробуйте изменить параметры фильтрации',
+							currency: 'Валюта:',
+							exchangeRate: 'Курс обмена',
+							updated: 'обновлено',
+						},
+						en: {
+							sellers: 'Sellers',
+							allSellers: 'All Sellers',
+							filters: 'Filters',
+							search: 'Search',
+							searchPlaceholder: 'Search by title or description...',
+							category: 'Category',
+							allCategories: 'All Categories',
+							priceFrom: 'Price From',
+							priceTo: 'Price To',
+							resetFilters: 'Reset Filters',
+							loading: 'Loading data...',
+							itemsFound: 'Items Found',
+							viewOnAvito: 'View on Avito',
+							noResults: 'No Results',
+							tryDifferentFilters: 'Try different filters',
+							currency: 'Currency:',
+							exchangeRate: 'Exchange Rate',
+							updated: 'updated',
+						},
+						zh: {
+							sellers: '卖家',
+							allSellers: '所有卖家',
+							filters: '筛选',
+							search: '搜索',
+							searchPlaceholder: '按标题或描述搜索...',
+							category: '类别',
+							allCategories: '所有类别',
+							priceFrom: '最低价格',
+							priceTo: '最高价格',
+							resetFilters: '重置筛选',
+							loading: '加载中...',
+							itemsFound: '找到商品',
+							viewOnAvito: '在Avito上查看',
+							noResults: '未找到结果',
+							tryDifferentFilters: '尝试不同的筛选条件',
+							currency: '货币:',
+							exchangeRate: '汇率',
+							updated: '更新于',
+						},
+					},
 
-                getCategoryName(item) {
-                    const slug = this.getCategorySlug(item);
-                    return this.categoryMap[slug] || slug;
-                },
+					async loadData() {
+						try {
+							this.loading = true
+							this.error = null
 
-                get uniqueCategories() {
-                    const catCounts = {};
-                    this.allItems.forEach(item => {
-                        const slug = this.getCategorySlug(item);
-                        catCounts[slug] = (catCounts[slug] || 0) + 1;
-                    });
+							// Load translations from localStorage
+							const savedTranslations = localStorage.getItem('translationCache')
+							if (savedTranslations) {
+								try {
+									this.translationCache = JSON.parse(savedTranslations)
+									console.log('Loaded cached translations:', Object.keys(this.translationCache).length)
+								} catch (e) {
+									console.error('Failed to parse cached translations')
+								}
+							}
 
-                    return Object.entries(catCounts)
-                        .map(([slug, count]) => ({
-                            slug,
-                            name: this.categoryMap[slug] || slug,
-                            count
-                        }))
-                        .sort((a, b) => a.name.localeCompare(b.name));
-                },
+							// Load brands
+							const brandsResponse = await fetch('./brands.json')
+							if (!brandsResponse.ok) throw new Error('Failed to load brands')
+							this.brands = await brandsResponse.json()
 
-                getBrandItemCount(brand) {
-                    return this.allItems.filter(item => item.brand === brand).length;
-                },
+							// Load items from each brand
+							const itemsPromises = this.brands.map(async (brand) => {
+								try {
+									const response = await fetch(`./${brand}.json`)
+									if (!response.ok) return []
+									const items = await response.json()
+									return items.map((item) => ({ ...item, brand }))
+								} catch (err) {
+									console.error(`Failed to load ${brand}:`, err)
+									return []
+								}
+							})
 
-                get filteredItems() {
-                    return this.allItems.filter(item => {
-                        // Brand filter
-                        if (this.filters.brand && item.brand !== this.filters.brand) {
-                            return false;
-                        }
+							const itemsArrays = await Promise.all(itemsPromises)
+							this.allItems = itemsArrays.flat()
 
-                        // Search filter
-                        if (this.filters.search) {
-                            const searchLower = this.filters.search.toLowerCase();
-                            const matchTitle = item.title.toLowerCase().includes(searchLower);
-                            const matchDesc = item.description.toLowerCase().includes(searchLower);
-                            if (!matchTitle && !matchDesc) return false;
-                        }
+							// Load category map
+							const catResponse = await fetch('./categorymap.json')
+							if (!catResponse.ok) throw new Error('Failed to load categories')
+							this.categoryMap = await catResponse.json()
 
-                        // Category filter
-                        if (this.filters.category) {
-                            const itemCategory = this.getCategorySlug(item);
-                            if (itemCategory !== this.filters.category) return false;
-                        }
+							// Load exchange rates
+							await this.loadExchangeRates()
+						} catch (err) {
+							this.error = 'Error loading data: ' + err.message
+							console.error(err)
+						} finally {
+							this.loading = false
+						}
+					},
 
-                        // Price filter (in RUB)
-                        if (this.filters.priceMin !== null && this.filters.priceMin !== '') {
-                            if (item.price < this.filters.priceMin) return false;
-                        }
-                        if (this.filters.priceMax !== null && this.filters.priceMax !== '') {
-                            if (item.price > this.filters.priceMax) return false;
-                        }
+					async loadExchangeRates() {
+						try {
+							// Using free ExchangeRate-API (no API key required)
+							const response = await fetch('https://open.er-api.com/v6/latest/RUB')
+							if (!response.ok) throw new Error('Failed to load exchange rates')
+							const data = await response.json()
+							this.exchangeRates = {
+								rates: data.rates,
+								timestamp: data.time_last_update_unix,
+							}
+						} catch (err) {
+							console.error('Exchange rates error:', err)
+							// Fallback rates
+							this.exchangeRates = {
+								rates: { RUB: 1, USD: 0.011, CNY: 0.079 },
+								timestamp: Date.now() / 1000,
+							}
+						}
+					},
 
-                        return true;
-                    });
-                },
+					getCategorySlug(item) {
+						const match = item.url.match(/avito\.ru\/[^\/]+\/([^\/\?]+)/)
+						return match ? match[1] : 'unknown'
+					},
 
-                selectBrand(brand) {
-                    this.filters.brand = brand;
-                },
+					getCategoryName(item) {
+						const slug = this.getCategorySlug(item)
+						return this.categoryMap[slug] || slug
+					},
 
-                setPrice(min, max) {
-                    this.filters.priceMin = min;
-                    this.filters.priceMax = max;
-                },
+					get uniqueCategories() {
+						const catCounts = {}
+						this.allItems.forEach((item) => {
+							const slug = this.getCategorySlug(item)
+							catCounts[slug] = (catCounts[slug] || 0) + 1
+						})
 
-                resetFilters() {
-                    this.filters = {
-                        search: '',
-                        category: '',
-                        brand: this.filters.brand, // Keep brand filter
-                        priceMin: null,
-                        priceMax: null
-                    };
-                },
+						return Object.entries(catCounts)
+							.map(([slug, count]) => ({
+								slug,
+								name: this.categoryMap[slug] || slug,
+								count,
+							}))
+							.sort((a, b) => a.name.localeCompare(b.name))
+					},
 
-                getExchangeRate() {
-                    if (!this.exchangeRates.rates) return 'N/A';
-                    const rate = this.exchangeRates.rates[this.settings.currency];
-                    return rate ? rate.toFixed(4) + ' ' + this.settings.currency : 'N/A';
-                },
+					getBrandItemCount(brand) {
+						return this.allItems.filter((item) => item.brand === brand).length
+					},
 
-                formatPrice(priceRub, currency) {
-                    if (!this.exchangeRates.rates) return priceRub + ' ₽';
-                    
-                    const rate = this.exchangeRates.rates[currency];
-                    if (!rate) return priceRub + ' ₽';
+					get filteredItems() {
+						return this.allItems.filter((item) => {
+							// Brand filter
+							if (this.filters.brand && item.brand !== this.filters.brand) {
+								return false
+							}
 
-                    const converted = priceRub * rate;
-                    
-                    const symbols = {
-                        RUB: '₽',
-                        USD: '$',
-                        CNY: '¥'
-                    };
+							// Search filter
+							if (this.filters.search) {
+								const searchLower = this.filters.search.toLowerCase()
+								const matchTitle = item.title.toLowerCase().includes(searchLower)
+								const matchDesc = item.description.toLowerCase().includes(searchLower)
+								if (!matchTitle && !matchDesc) return false
+							}
 
-                    const symbol = symbols[currency] || currency;
-                    return `${symbol} ${converted.toFixed(2)}`;
-                },
+							// Category filter
+							if (this.filters.category) {
+								const itemCategory = this.getCategorySlug(item)
+								if (itemCategory !== this.filters.category) return false
+							}
 
-                async translateText(text, targetLang) {
-                    // Skip translation for Russian
-                    if (targetLang === 'ru') return text;
-                    
-                    // Limit text length
-                    const maxLength = 500;
-                    const textToTranslate = text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+							// Price filter (in RUB)
+							if (this.filters.priceMin !== null && this.filters.priceMin !== '') {
+								if (item.price < this.filters.priceMin) return false
+							}
+							if (this.filters.priceMax !== null && this.filters.priceMax !== '') {
+								if (item.price > this.filters.priceMax) return false
+							}
 
-                    // Check cache
-                    const cacheKey = `${textToTranslate}_${targetLang}`;
-                    if (this.translationCache[cacheKey]) {
-                        return this.translationCache[cacheKey];
-                    }
+							return true
+						})
+					},
 
-                    // Try multiple translation services
-                    const translators = [
-                        // Method 1: LibreTranslate
-                        async () => {
-                            const response = await fetch('https://libretranslate.com/translate', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    q: textToTranslate,
-                                    source: 'ru',
-                                    target: targetLang === 'zh' ? 'zh' : 'en',
-                                    format: 'text'
-                                })
-                            });
-                            if (response.ok) {
-                                const data = await response.json();
-                                return data.translatedText;
-                            }
-                            throw new Error('LibreTranslate failed');
-                        },
-                        
-                        // Method 2: MyMemory Translation API (free, no key required)
-                        async () => {
-                            const langCode = targetLang === 'zh' ? 'zh-CN' : 'en-US';
-                            const response = await fetch(
-                                `https://api.mymemory.translated.net/get?q=${encodeURIComponent(textToTranslate)}&langpair=ru|${langCode}`
-                            );
-                            if (response.ok) {
-                                const data = await response.json();
-                                if (data.responseData && data.responseData.translatedText) {
-                                    return data.responseData.translatedText;
-                                }
-                            }
-                            throw new Error('MyMemory failed');
-                        }
-                    ];
+					selectBrand(brand) {
+						this.filters.brand = brand
+					},
 
-                    // Try each translator until one succeeds
-                    for (const translator of translators) {
-                        try {
-                            const result = await translator();
-                            this.translationCache[cacheKey] = result;
-                            return result;
-                        } catch (err) {
-                            console.log('Translator failed, trying next...', err);
-                            continue;
-                        }
-                    }
+					setPrice(min, max) {
+						this.filters.priceMin = min
+						this.filters.priceMax = max
+					},
 
-                    console.error('All translation methods failed');
-                    return textToTranslate; // Fallback to original
-                },
+					resetFilters() {
+						this.filters = {
+							search: '',
+							category: '',
+							brand: this.filters.brand, // Keep brand filter
+							priceMin: null,
+							priceMax: null,
+						}
+					},
 
-                getTranslatedField(item, field) {
-                    if (this.settings.language === 'ru') {
-                        return item[field];
-                    }
+					getExchangeRate() {
+						if (!this.exchangeRates.rates) return 'N/A'
+						const rate = this.exchangeRates.rates[this.settings.currency]
+						return rate ? rate.toFixed(4) + ' ' + this.settings.currency : 'N/A'
+					},
 
-                    const translatedKey = `${field}_${this.settings.language}`;
-                    return item[translatedKey] || item[field];
-                },
+					formatPrice(priceRub, currency) {
+						if (!this.exchangeRates.rates) return priceRub + ' ₽'
 
-                async changeLanguage() {
-                    if (this.settings.language === 'ru') {
-                        this.translationProgress = 0;
-                        return;
-                    }
+						const rate = this.exchangeRates.rates[currency]
+						if (!rate) return priceRub + ' ₽'
 
-                    this.loading = true;
-                    this.translationProgress = 0;
-                    
-                    // Translate items in batches to avoid overwhelming the API
-                    const batchSize = 3; // Smaller batches for better UX
-                    const totalItems = this.allItems.length;
-                    
-                    for (let i = 0; i < this.allItems.length; i += batchSize) {
-                        const batch = this.allItems.slice(i, i + batchSize);
-                        
-                        await Promise.all(batch.map(async (item) => {
-                            // Translate title
-                            if (!item[`title_${this.settings.language}`]) {
-                                item[`title_${this.settings.language}`] = await this.translateText(item.title, this.settings.language);
-                            }
-                            
-                            // Translate description (first 300 chars)
-                            if (!item[`description_${this.settings.language}`]) {
-                                const shortDesc = item.description.substring(0, 300);
-                                item[`description_${this.settings.language}`] = await this.translateText(shortDesc, this.settings.language);
-                            }
-                        }));
-                        
-                        // Update progress
-                        this.translationProgress = Math.min(100, Math.round(((i + batchSize) / totalItems) * 100));
-                        
-                        // Small delay between batches to avoid rate limiting
-                        await new Promise(resolve => setTimeout(resolve, 300));
-                    }
-                    
-                    this.translationProgress = 100;
-                    this.loading = false;
-                }
-            }
-        }
-    </script>
-</body>
+						const converted = priceRub * rate
+
+						const symbols = {
+							RUB: '₽',
+							USD: '$',
+							CNY: '¥',
+						}
+
+						const symbol = symbols[currency] || currency
+						return `${symbol} ${converted.toFixed(2)}`
+					},
+
+					async translateText(text, targetLang) {
+						// Skip translation for Russian
+						if (targetLang === 'ru') return text
+
+						// Limit text length
+						const maxLength = 400
+						const textToTranslate = text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+
+						// Check cache
+						const cacheKey = `${textToTranslate}_${targetLang}`
+						if (this.translationCache[cacheKey]) {
+							return this.translationCache[cacheKey]
+						}
+
+						// Try multiple translation services with delays
+						const translators = [
+							// Method 1: MyMemory Translation API (free, no key, higher limits)
+							async () => {
+								const langCode = targetLang === 'zh' ? 'zh-CN' : 'en-US'
+								const response = await fetch(
+									`https://api.mymemory.translated.net/get?q=${encodeURIComponent(textToTranslate)}&langpair=ru|${langCode}`,
+								)
+								if (response.ok) {
+									const data = await response.json()
+									if (data.responseData && data.responseData.translatedText) {
+										return data.responseData.translatedText
+									}
+								}
+								throw new Error('MyMemory failed')
+							},
+
+							// Method 2: Lingva Translate (free Google Translate proxy)
+							async () => {
+								const langCode = targetLang === 'zh' ? 'zh' : 'en'
+								const response = await fetch(
+									`https://lingva.ml/api/v1/ru/${langCode}/${encodeURIComponent(textToTranslate)}`,
+								)
+								if (response.ok) {
+									const data = await response.json()
+									if (data.translation) {
+										return data.translation
+									}
+								}
+								throw new Error('Lingva failed')
+							},
+
+							// Method 3: LibreTranslate (with longer delay)
+							async () => {
+								await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second
+								const response = await fetch('https://libretranslate.com/translate', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({
+										q: textToTranslate,
+										source: 'ru',
+										target: targetLang === 'zh' ? 'zh' : 'en',
+										format: 'text',
+									}),
+								})
+								if (response.ok) {
+									const data = await response.json()
+									return data.translatedText
+								}
+								throw new Error('LibreTranslate failed')
+							},
+						]
+
+						// Try each translator until one succeeds
+						for (const translator of translators) {
+							try {
+								const result = await translator()
+								this.translationCache[cacheKey] = result
+
+								// Save to localStorage
+								try {
+									localStorage.setItem('translationCache', JSON.stringify(this.translationCache))
+								} catch (e) {
+									console.warn('Failed to save translations to localStorage')
+								}
+
+								return result
+							} catch (err) {
+								console.log('Translator failed, trying next...', err)
+								continue
+							}
+						}
+
+						console.error('All translation methods failed for:', textToTranslate.substring(0, 50))
+						return textToTranslate // Fallback to original
+					},
+
+					getTranslatedField(item, field) {
+						if (this.settings.language === 'ru') {
+							return item[field]
+						}
+
+						const translatedKey = `${field}_${this.settings.language}`
+						return item[translatedKey] || item[field]
+					},
+
+					async changeLanguage() {
+						if (this.settings.language === 'ru') {
+							this.translationProgress = 0
+							return
+						}
+
+						this.loading = true
+						this.translationProgress = 0
+
+						// Translate items in smaller batches with longer delays
+						const batchSize = 2 // Very small batches to avoid rate limiting
+						const totalItems = this.allItems.length
+
+						for (let i = 0; i < this.allItems.length; i += batchSize) {
+							const batch = this.allItems.slice(i, i + batchSize)
+
+							// Process batch items sequentially to avoid rate limits
+							for (const item of batch) {
+								// Translate title
+								if (!item[`title_${this.settings.language}`]) {
+									item[`title_${this.settings.language}`] = await this.translateText(
+										item.title,
+										this.settings.language,
+									)
+									await new Promise((resolve) => setTimeout(resolve, 500)) // 500ms between requests
+								}
+
+								// Translate description (first 250 chars)
+								if (!item[`description_${this.settings.language}`]) {
+									const shortDesc = item.description.substring(0, 250)
+									item[`description_${this.settings.language}`] = await this.translateText(
+										shortDesc,
+										this.settings.language,
+									)
+									await new Promise((resolve) => setTimeout(resolve, 500)) // 500ms between requests
+								}
+							}
+
+							// Update progress
+							this.translationProgress = Math.min(100, Math.round(((i + batchSize) / totalItems) * 100))
+
+							// Longer delay between batches
+							await new Promise((resolve) => setTimeout(resolve, 800))
+						}
+
+						this.translationProgress = 100
+						this.loading = false
+					},
+
+					clearTranslationCache() {
+						if (confirm('Clear all cached translations? You will need to translate items again.')) {
+							this.translationCache = {}
+							localStorage.removeItem('translationCache')
+
+							// Reset translations in items
+							this.allItems.forEach((item) => {
+								delete item.title_en
+								delete item.title_zh
+								delete item.description_en
+								delete item.description_zh
+							})
+
+							console.log('Translation cache cleared')
+						}
+					},
+				}
+			}
+		</script>
+	</body>
 </html>
