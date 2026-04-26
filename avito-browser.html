@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avito Items Browser</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div x-data="avitoApp()" x-init="loadData()" class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-3xl font-bold text-gray-900">Товары Avito</h1>
+                
+                <!-- Language Selector -->
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-700">Язык:</label>
+                        <select 
+                            x-model="settings.language"
+                            @change="changeLanguage()"
+                            class="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="ru">🇷🇺 Русский</option>
+                            <option value="en">🇬🇧 English</option>
+                            <option value="zh">🇨🇳 中文</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Currency Selector -->
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-700" x-text="translations[settings.language].currency"></label>
+                        <select 
+                            x-model="settings.currency"
+                            class="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="RUB">₽ RUB</option>
+                            <option value="USD">$ USD</option>
+                            <option value="CNY">¥ CNY</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <p class="text-gray-600">
+                <span x-text="translations[settings.language].itemsFound"></span>: 
+                <span x-text="filteredItems.length"></span>
+            </p>
+            <p class="text-sm text-gray-500" x-show="exchangeRates.timestamp">
+                <span x-text="translations[settings.language].exchangeRate"></span>: 
+                1 RUB = <span x-text="getExchangeRate()"></span>
+                (<span x-text="translations[settings.language].updated"></span>: <span x-text="new Date(exchangeRates.timestamp * 1000).toLocaleString()"></span>)
+            </p>
+        </div>
+
+        <!-- Brand Navigation -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4" x-text="translations[settings.language].sellers"></h2>
+            <div class="flex flex-wrap gap-2">
+                <button 
+                    @click="selectBrand('')"
+                    :class="filters.brand === '' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
+                    class="px-4 py-2 rounded-lg hover:opacity-80 transition"
+                >
+                    <span x-text="translations[settings.language].allSellers"></span>
+                    (<span x-text="allItems.length"></span>)
+                </button>
+                <template x-for="brand in brands" :key="brand">
+                    <button 
+                        @click="selectBrand(brand)"
+                        :class="filters.brand === brand ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
+                        class="px-4 py-2 rounded-lg hover:opacity-80 transition"
+                    >
+                        <span x-text="brand"></span>
+                        (<span x-text="getBrandItemCount(brand)"></span>)
+                    </button>
+                </template>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4" x-text="translations[settings.language].filters"></h2>
+            
+            <!-- Search -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[settings.language].search"></label>
+                <input 
+                    type="text" 
+                    x-model="filters.search"
+                    :placeholder="translations[settings.language].searchPlaceholder"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+            </div>
+
+            <!-- Category Filter -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[settings.language].category"></label>
+                <select 
+                    x-model="filters.category"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                    <option value="" x-text="translations[settings.language].allCategories"></option>
+                    <template x-for="cat in uniqueCategories" :key="cat.slug">
+                        <option :value="cat.slug" x-text="cat.name + ' (' + cat.count + ')'"></option>
+                    </template>
+                </select>
+            </div>
+
+            <!-- Price Range -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[settings.language].priceFrom"></label>
+                    <input 
+                        type="number" 
+                        x-model.number="filters.priceMin"
+                        placeholder="0"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[settings.language].priceTo"></label>
+                    <input 
+                        type="number" 
+                        x-model.number="filters.priceMax"
+                        placeholder="∞"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                </div>
+            </div>
+
+            <!-- Quick Price Filters -->
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button 
+                    @click="setPrice(0, 2000)"
+                    class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+                    x-text="'< ' + formatPrice(2000, settings.currency)"
+                ></button>
+                <button 
+                    @click="setPrice(2000, 10000)"
+                    class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+                    x-text="formatPrice(2000, settings.currency) + ' - ' + formatPrice(10000, settings.currency)"
+                ></button>
+                <button 
+                    @click="setPrice(10000, 50000)"
+                    class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+                    x-text="formatPrice(10000, settings.currency) + ' - ' + formatPrice(50000, settings.currency)"
+                ></button>
+                <button 
+                    @click="setPrice(50000, null)"
+                    class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+                    x-text="'> ' + formatPrice(50000, settings.currency)"
+                ></button>
+            </div>
+
+            <!-- Reset Button -->
+            <button 
+                @click="resetFilters()"
+                class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                x-text="translations[settings.language].resetFilters"
+            ></button>
+        </div>
+
+        <!-- Loading State -->
+        <div x-show="loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p class="mt-4 text-gray-600" x-text="translations[settings.language].loading"></p>
+        </div>
+
+        <!-- Error State -->
+        <div x-show="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <p x-text="error"></p>
+        </div>
+
+        <!-- Items Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <template x-for="item in filteredItems" :key="item.id">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
+                    <!-- Image -->
+                    <div class="relative h-48 bg-gray-200">
+                        <img 
+                            :src="item.image" 
+                            :alt="getTranslatedField(item, 'title')"
+                            class="w-full h-full object-cover"
+                            @error="$event.target.src='https://via.placeholder.com/400x300?text=No+Image'"
+                        >
+                        <div class="absolute top-2 right-2 bg-white px-3 py-1 rounded-full shadow">
+                            <span class="text-lg font-bold text-blue-600" x-text="formatPrice(item.price, settings.currency)"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg mb-2 line-clamp-2" x-text="getTranslatedField(item, 'title')"></h3>
+                        
+                        <!-- Category Badge -->
+                        <div class="mb-2">
+                            <span 
+                                class="inline-block px-3 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full"
+                                x-text="getCategoryName(item)"
+                            ></span>
+                            <span 
+                                class="inline-block px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full ml-2"
+                                x-text="item.brand || 'Unknown'"
+                            ></span>
+                        </div>
+                        
+                        <!-- Location & Date -->
+                        <div class="flex items-center text-sm text-gray-500 mb-3">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span x-text="item.location"></span>
+                            <span class="mx-2">•</span>
+                            <span x-text="item.date"></span>
+                        </div>
+                        
+                        <!-- Description -->
+                        <p class="text-sm text-gray-600 mb-4 line-clamp-3" x-text="getTranslatedField(item, 'description')"></p>
+                        
+                        <!-- Link -->
+                        <a 
+                            :href="item.url" 
+                            target="_blank"
+                            class="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                            x-text="translations[settings.language].viewOnAvito"
+                        ></a>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- No Results -->
+        <div x-show="!loading && filteredItems.length === 0" class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h3 class="mt-2 text-lg font-medium text-gray-900" x-text="translations[settings.language].noResults"></h3>
+            <p class="mt-1 text-gray-500" x-text="translations[settings.language].tryDifferentFilters"></p>
+        </div>
+    </div>
+
+    <script>
+        function avitoApp() {
+            return {
+                brands: [],
+                allItems: [],
+                categoryMap: {},
+                exchangeRates: {},
+                loading: true,
+                error: null,
+                translationCache: {},
+                settings: {
+                    language: 'ru',
+                    currency: 'RUB'
+                },
+                filters: {
+                    search: '',
+                    category: '',
+                    brand: '',
+                    priceMin: null,
+                    priceMax: null
+                },
+                translations: {
+                    ru: {
+                        sellers: 'Продавцы',
+                        allSellers: 'Все продавцы',
+                        filters: 'Фильтры',
+                        search: 'Поиск',
+                        searchPlaceholder: 'Поиск по названию или описанию...',
+                        category: 'Категория',
+                        allCategories: 'Все категории',
+                        priceFrom: 'Цена от',
+                        priceTo: 'Цена до',
+                        resetFilters: 'Сбросить фильтры',
+                        loading: 'Загрузка данных...',
+                        itemsFound: 'Найдено товаров',
+                        viewOnAvito: 'Посмотреть на Avito',
+                        noResults: 'Ничего не найдено',
+                        tryDifferentFilters: 'Попробуйте изменить параметры фильтрации',
+                        currency: 'Валюта:',
+                        exchangeRate: 'Курс обмена',
+                        updated: 'обновлено'
+                    },
+                    en: {
+                        sellers: 'Sellers',
+                        allSellers: 'All Sellers',
+                        filters: 'Filters',
+                        search: 'Search',
+                        searchPlaceholder: 'Search by title or description...',
+                        category: 'Category',
+                        allCategories: 'All Categories',
+                        priceFrom: 'Price From',
+                        priceTo: 'Price To',
+                        resetFilters: 'Reset Filters',
+                        loading: 'Loading data...',
+                        itemsFound: 'Items Found',
+                        viewOnAvito: 'View on Avito',
+                        noResults: 'No Results',
+                        tryDifferentFilters: 'Try different filters',
+                        currency: 'Currency:',
+                        exchangeRate: 'Exchange Rate',
+                        updated: 'updated'
+                    },
+                    zh: {
+                        sellers: '卖家',
+                        allSellers: '所有卖家',
+                        filters: '筛选',
+                        search: '搜索',
+                        searchPlaceholder: '按标题或描述搜索...',
+                        category: '类别',
+                        allCategories: '所有类别',
+                        priceFrom: '最低价格',
+                        priceTo: '最高价格',
+                        resetFilters: '重置筛选',
+                        loading: '加载中...',
+                        itemsFound: '找到商品',
+                        viewOnAvito: '在Avito上查看',
+                        noResults: '未找到结果',
+                        tryDifferentFilters: '尝试不同的筛选条件',
+                        currency: '货币:',
+                        exchangeRate: '汇率',
+                        updated: '更新于'
+                    }
+                },
+
+                async loadData() {
+                    try {
+                        this.loading = true;
+                        this.error = null;
+
+                        // Load brands
+                        const brandsResponse = await fetch('./brands.json');
+                        if (!brandsResponse.ok) throw new Error('Failed to load brands');
+                        this.brands = await brandsResponse.json();
+
+                        // Load items from each brand
+                        const itemsPromises = this.brands.map(async (brand) => {
+                            try {
+                                const response = await fetch(`./${brand}.json`);
+                                if (!response.ok) return [];
+                                const items = await response.json();
+                                return items.map(item => ({ ...item, brand }));
+                            } catch (err) {
+                                console.error(`Failed to load ${brand}:`, err);
+                                return [];
+                            }
+                        });
+
+                        const itemsArrays = await Promise.all(itemsPromises);
+                        this.allItems = itemsArrays.flat();
+
+                        // Load category map
+                        const catResponse = await fetch('./categorymap.json');
+                        if (!catResponse.ok) throw new Error('Failed to load categories');
+                        this.categoryMap = await catResponse.json();
+
+                        // Load exchange rates
+                        await this.loadExchangeRates();
+
+                    } catch (err) {
+                        this.error = 'Error loading data: ' + err.message;
+                        console.error(err);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadExchangeRates() {
+                    try {
+                        // Using free ExchangeRate-API (no API key required)
+                        const response = await fetch('https://open.er-api.com/v6/latest/RUB');
+                        if (!response.ok) throw new Error('Failed to load exchange rates');
+                        const data = await response.json();
+                        this.exchangeRates = {
+                            rates: data.rates,
+                            timestamp: data.time_last_update_unix
+                        };
+                    } catch (err) {
+                        console.error('Exchange rates error:', err);
+                        // Fallback rates
+                        this.exchangeRates = {
+                            rates: { RUB: 1, USD: 0.011, CNY: 0.079 },
+                            timestamp: Date.now() / 1000
+                        };
+                    }
+                },
+
+                getCategorySlug(item) {
+                    const match = item.url.match(/avito\.ru\/[^\/]+\/([^\/\?]+)/);
+                    return match ? match[1] : 'unknown';
+                },
+
+                getCategoryName(item) {
+                    const slug = this.getCategorySlug(item);
+                    return this.categoryMap[slug] || slug;
+                },
+
+                get uniqueCategories() {
+                    const catCounts = {};
+                    this.allItems.forEach(item => {
+                        const slug = this.getCategorySlug(item);
+                        catCounts[slug] = (catCounts[slug] || 0) + 1;
+                    });
+
+                    return Object.entries(catCounts)
+                        .map(([slug, count]) => ({
+                            slug,
+                            name: this.categoryMap[slug] || slug,
+                            count
+                        }))
+                        .sort((a, b) => a.name.localeCompare(b.name));
+                },
+
+                getBrandItemCount(brand) {
+                    return this.allItems.filter(item => item.brand === brand).length;
+                },
+
+                get filteredItems() {
+                    return this.allItems.filter(item => {
+                        // Brand filter
+                        if (this.filters.brand && item.brand !== this.filters.brand) {
+                            return false;
+                        }
+
+                        // Search filter
+                        if (this.filters.search) {
+                            const searchLower = this.filters.search.toLowerCase();
+                            const matchTitle = item.title.toLowerCase().includes(searchLower);
+                            const matchDesc = item.description.toLowerCase().includes(searchLower);
+                            if (!matchTitle && !matchDesc) return false;
+                        }
+
+                        // Category filter
+                        if (this.filters.category) {
+                            const itemCategory = this.getCategorySlug(item);
+                            if (itemCategory !== this.filters.category) return false;
+                        }
+
+                        // Price filter (in RUB)
+                        if (this.filters.priceMin !== null && this.filters.priceMin !== '') {
+                            if (item.price < this.filters.priceMin) return false;
+                        }
+                        if (this.filters.priceMax !== null && this.filters.priceMax !== '') {
+                            if (item.price > this.filters.priceMax) return false;
+                        }
+
+                        return true;
+                    });
+                },
+
+                selectBrand(brand) {
+                    this.filters.brand = brand;
+                },
+
+                setPrice(min, max) {
+                    this.filters.priceMin = min;
+                    this.filters.priceMax = max;
+                },
+
+                resetFilters() {
+                    this.filters = {
+                        search: '',
+                        category: '',
+                        brand: this.filters.brand, // Keep brand filter
+                        priceMin: null,
+                        priceMax: null
+                    };
+                },
+
+                getExchangeRate() {
+                    if (!this.exchangeRates.rates) return 'N/A';
+                    const rate = this.exchangeRates.rates[this.settings.currency];
+                    return rate ? rate.toFixed(4) + ' ' + this.settings.currency : 'N/A';
+                },
+
+                formatPrice(priceRub, currency) {
+                    if (!this.exchangeRates.rates) return priceRub + ' ₽';
+                    
+                    const rate = this.exchangeRates.rates[currency];
+                    if (!rate) return priceRub + ' ₽';
+
+                    const converted = priceRub * rate;
+                    
+                    const symbols = {
+                        RUB: '₽',
+                        USD: '$',
+                        CNY: '¥'
+                    };
+
+                    const symbol = symbols[currency] || currency;
+                    return `${symbol} ${converted.toFixed(2)}`;
+                },
+
+                async translateText(text, targetLang) {
+                    // Skip translation for Russian
+                    if (targetLang === 'ru') return text;
+
+                    // Check cache
+                    const cacheKey = `${text}_${targetLang}`;
+                    if (this.translationCache[cacheKey]) {
+                        return this.translationCache[cacheKey];
+                    }
+
+                    try {
+                        // Using LibreTranslate public API
+                        const response = await fetch('https://libretranslate.com/translate', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                q: text,
+                                source: 'ru',
+                                target: targetLang === 'zh' ? 'zh' : 'en',
+                                format: 'text'
+                            })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.translationCache[cacheKey] = data.translatedText;
+                            return data.translatedText;
+                        }
+                    } catch (err) {
+                        console.error('Translation error:', err);
+                    }
+
+                    return text; // Fallback to original
+                },
+
+                getTranslatedField(item, field) {
+                    if (this.settings.language === 'ru') {
+                        return item[field];
+                    }
+
+                    const translatedKey = `${field}_${this.settings.language}`;
+                    return item[translatedKey] || item[field];
+                },
+
+                async changeLanguage() {
+                    if (this.settings.language === 'ru') return;
+
+                    // Translate all items
+                    for (const item of this.allItems) {
+                        if (!item[`title_${this.settings.language}`]) {
+                            item[`title_${this.settings.language}`] = await this.translateText(item.title, this.settings.language);
+                        }
+                        if (!item[`description_${this.settings.language}`]) {
+                            const shortDesc = item.description.substring(0, 200);
+                            item[`description_${this.settings.language}`] = await this.translateText(shortDesc, this.settings.language);
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
